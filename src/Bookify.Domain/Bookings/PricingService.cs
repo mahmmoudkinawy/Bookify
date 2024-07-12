@@ -2,15 +2,14 @@
 using Bookify.Domain.Shared;
 
 namespace Bookify.Domain.Bookings;
+
 public class PricingService
 {
     public PricingDetails CalculatePrice(Apartment apartment, DateRange period)
     {
         var currency = apartment.Price.Currency;
 
-        var priceForPeriod = new Money(
-            apartment.Price.Amount * period.LengthInDays,
-            currency);
+        var priceForPeriod = new Money(apartment.Price.Amount * period.LengthInDays, currency);
 
         decimal percentageUpCharge = 0;
         foreach (var amenity in apartment.Amenities)
@@ -27,22 +26,20 @@ public class PricingService
         var amenitiesUpCharge = Money.Zero(currency);
         if (percentageUpCharge > 0)
         {
-            amenitiesUpCharge = new Money(
-                priceForPeriod.Amount * percentageUpCharge,
-                currency);
+            amenitiesUpCharge = new Money(priceForPeriod.Amount * percentageUpCharge, currency);
         }
 
         var totalPrice = Money.Zero();
 
         totalPrice += priceForPeriod;
 
-        if (!apartment.CleeningFee.IsZero())
+        if (!apartment.CleaningFee.IsZero())
         {
-            totalPrice += apartment.CleeningFee;
+            totalPrice += apartment.CleaningFee;
         }
 
         totalPrice += amenitiesUpCharge;
 
-        return new PricingDetails(priceForPeriod, apartment.CleeningFee, amenitiesUpCharge, totalPrice);
+        return new PricingDetails(priceForPeriod, apartment.CleaningFee, amenitiesUpCharge, totalPrice);
     }
 }
