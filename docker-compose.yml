@@ -7,29 +7,42 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__Database=Host=bookify-db; Port=5432; User Id=postgres; Password=postgres; Database=Bookify;
+      - Authentication__Audience=account
+      - Authentication__ValidIssuer=http://bookify-idp:8080/realms/bookify
+      - Authentication__MetadataUrl=http://bookify-idp:8080/realms/bookify/.well-known/openid-configuration
+      - Authentication__RequireHttpsMetadata=false
+      - Keycloak__BaseUrl=http://bookify-idp:8080
+      - Keycloak__AdminUrl=http://bookify-idp:8080/admin/realms/bookify/
+      - Keycloak__TokenUrl=http://bookify-idp:8080/realms/bookify/protocol/openid-connect/token
+      - Keycloak__AdminClientId=bookify-admin-client
+      - Keycloak__AdminClientSecret=UZDmbNxWmV4TlpaCRcju6pMRsyuV3er1
+      - Keycloak__AuthClientId=bookify-auth-client
+      - Keycloak__AuthClientSecret=3E3yvXaYppoYBF3Ir6DgtEzADKKzSurZ
     ports:
-      - 8080:8080
+      - 5000:8080
     build:
       context: .
       dockerfile: src/Bookify.Api/Dockerfile
     depends_on:
       - bookify-db
-     
+      - bookify-idp
+
   bookify-db:
     image: postgres:latest
     container_name: bookify-db
     environment:
       - POSTGRES_DB=bookify
-      - POSTGRES_USER=postgres 
+      - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     volumes:
       - ./.containers/database:/var/lib/postgresql/data
     ports:
       - 5432:5432
-   
+
   bookify-idp:
     image: quay.io/keycloak/keycloak:latest
-    container_name: Bookify.Identity
+    container_name: bookify-idp
     command: start-dev --import-realm
     environment:
       - KEYCLOAK_ADMIN=admin
@@ -39,5 +52,3 @@ services:
       - ./.files/bookify-realm-export.json:/opt/keycloak/data/import/realm.json
     ports:
       - 18080:8080
-
-

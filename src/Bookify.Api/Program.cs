@@ -16,17 +16,21 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+	app.UseSwagger();
+	app.UseSwaggerUI();
 
-    app.ApplyMigrations();
+	app.ApplyMigrations();
 
-    app.SeedData();
+	app.SeedData();
 }
 
 app.UseHttpsRedirection();
 
 app.UseCustomExceptionHandler();
+
+app.UseAuthentication();
+
+app.UseAuthorization();
 
 app.MapControllers();
 

@@ -7,4 +7,8 @@ public static class UserErrors
     public static Error NotFound = new(
         "Users.NotFound",
         "The User with the specified identifier was not found");
+
+    public static Error InvalidCredentials = new(
+        "Users.InvalidCredentials",
+        "User invalid credentials");
 }
