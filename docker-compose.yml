@@ -27,6 +27,7 @@ services:
     depends_on:
       - bookify-db
       - bookify-idp
+      - bookfiy-redis 
 
   bookify-db:
     image: postgres:latest
@@ -61,3 +62,10 @@ services:
     ports:
       - 5341:5341
       - 8081:80 
+
+  bookfiy-redis:
+    image: redis:latest
+    container_name: Bookify.Redis
+    restart: always
+    ports:
+      - 6379:6379
