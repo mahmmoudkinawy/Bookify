@@ -1,3 +1,5 @@
+using Asp.Versioning;
+using Bookify.Api.Controllers.Bookings;
 using Bookify.Api.Extensions;
 using Bookify.Api.OpenApi;
 using Bookify.Application;
@@ -8,8 +10,7 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((context, configuration) =>
-    configuration.ReadFrom.Configuration(context.Configuration));
+builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
 
 builder.Services.AddControllers();
 
@@ -25,22 +26,22 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        var descriptions = app.DescribeApiVersions();
+	app.UseSwagger();
+	app.UseSwaggerUI(options =>
+	{
+		var descriptions = app.DescribeApiVersions();
 
-        foreach (var description in descriptions)
-        {
-            var url = $"/swagger/{description.GroupName}/swagger.json";
-            var name = description.GroupName.ToUpperInvariant();
-            options.SwaggerEndpoint(url, name);
-        }
-    });
+		foreach (var description in descriptions)
+		{
+			var url = $"/swagger/{description.GroupName}/swagger.json";
+			var name = description.GroupName.ToUpperInvariant();
+			options.SwaggerEndpoint(url, name);
+		}
+	});
 
-    app.ApplyMigrations();
+	app.ApplyMigrations();
 
-    // app.SeedData();
+	// app.SeedData();
 }
 
 app.UseHttpsRedirection();
@@ -57,9 +58,12 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapHealthChecks("health", new HealthCheckOptions
-{
-    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-}).ShortCircuit();
+var apiVersionSet = app.NewApiVersionSet().HasApiVersion(new ApiVersion(1)).ReportApiVersions().Build();
+
+var routeGroupBuilder = app.MapGroup("api/v{version:apiVersion}").WithApiVersionSet(apiVersionSet);
+
+routeGroupBuilder.MapBookingEndpoints();
+
+app.MapHealthChecks("health", new HealthCheckOptions { ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse }).ShortCircuit();
 
 app.Run();
