@@ -10,31 +10,31 @@ namespace Bookify.Api.Controllers.Bookings;
 [Authorize]
 [ApiController]
 [ApiVersion(ApiVersions.V1)]
-[Route("api/v{version:apiVersion}bookings")]
+[Route("api/v{version:apiVersion}/bookings")]
 public class BookingsController(ISender sender) : ControllerBase
 {
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetBooking(Guid id, CancellationToken cancellationToken)
-    {
-        var query = new GetBookingQuery(id);
+	[HttpGet("{id}")]
+	public async Task<IActionResult> GetBooking(Guid id, CancellationToken cancellationToken)
+	{
+		var query = new GetBookingQuery(id);
 
-        var result = await sender.Send(query, cancellationToken);
+		var result = await sender.Send(query, cancellationToken);
 
-        return result.IsSuccess ? Ok(result.Value) : NotFound();
-    }
+		return result.IsSuccess ? Ok(result.Value) : NotFound();
+	}
 
-    [HttpPost]
-    public async Task<IActionResult> ReserveBooking(ReserveBookingRequest request, CancellationToken cancellationToken)
-    {
-        var command = new ReserveBookingCommand(request.ApartmentId, request.UserId, request.StartDate, request.EndDate);
+	[HttpPost]
+	public async Task<IActionResult> ReserveBooking(ReserveBookingRequest request, CancellationToken cancellationToken)
+	{
+		var command = new ReserveBookingCommand(request.ApartmentId, request.UserId, request.StartDate, request.EndDate);
 
-        var result = await sender.Send(command, cancellationToken);
+		var result = await sender.Send(command, cancellationToken);
 
-        if (result.IsFailure)
-        {
-            return BadRequest(result.Error);
-        }
+		if (result.IsFailure)
+		{
+			return BadRequest(result.Error);
+		}
 
-        return CreatedAtAction(nameof(GetBooking), new { id = result.Value }, result.Value);
-    }
+		return CreatedAtAction(nameof(GetBooking), new { id = result.Value }, result.Value);
+	}
 }

@@ -1,55 +1,62 @@
-﻿using Bookify.Application.Exceptions;
+﻿using Bookify.Application.Abstractions.Clock;
+using Bookify.Application.Exceptions;
 using Bookify.Domain.Abstractions;
-using MediatR;
+using Bookify.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace Bookify.Infrastructure;
 
-public sealed class ApplicationDbContext(
-    DbContextOptions<ApplicationDbContext> options,
-    IPublisher publisher) : DbContext(options), IUnitOfWork
+public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IDateTimeProvider dateTimeProvider)
+	: DbContext(options),
+		IUnitOfWork
 {
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+	private static readonly JsonSerializerSettings _jsonSerializerSettings = new() { TypeNameHandling = TypeNameHandling.All };
 
-        base.OnModelCreating(modelBuilder);
-    }
+	protected override void OnModelCreating(ModelBuilder modelBuilder)
+	{
+		modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var result = await base.SaveChangesAsync(cancellationToken);
+		base.OnModelCreating(modelBuilder);
+	}
 
-            await PublishDomainEventsAsync();
+	public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+	{
+		try
+		{
+			AddDomainEventsAsOutboxMessages();
 
-            return result;
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            throw new ConcurrencyException("Concurrency exception occurred.", ex);
-        }
-    }
+			var result = await base.SaveChangesAsync(cancellationToken);
 
-    private async Task PublishDomainEventsAsync()
-    {
-        var domainEvents = ChangeTracker
-            .Entries<Entity>()
-            .Select(entry => entry.Entity)
-            .SelectMany(entity =>
-            {
-                var domainEvents = entity.GetDomainEvents();
+			return result;
+		}
+		catch (DbUpdateConcurrencyException ex)
+		{
+			throw new ConcurrencyException("Concurrency exception occurred.", ex);
+		}
+	}
 
-                entity.ClearDomainEvents();
+	private void AddDomainEventsAsOutboxMessages()
+	{
+		var outboxMessages = ChangeTracker
+			.Entries<Entity>()
+			.Select(entry => entry.Entity)
+			.SelectMany(entity =>
+			{
+				var domainEvents = entity.GetDomainEvents();
 
-                return domainEvents;
-            })
-            .ToList();
+				entity.ClearDomainEvents();
 
-        foreach (var domainEvent in domainEvents)
-        {
-            await publisher.Publish(domainEvent);
-        }
-    }
+				return domainEvents;
+			})
+			.Select(domainEvent => new OutboxMessage(
+				Guid.NewGuid(),
+				dateTimeProvider.UtcNow,
+				domainEvent.GetType().Name,
+				JsonConvert.SerializeObject(domainEvent, _jsonSerializerSettings)
+			))
+			.ToList();
+
+		AddRange(outboxMessages);
+	}
 }
